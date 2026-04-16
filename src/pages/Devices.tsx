@@ -66,7 +66,14 @@ export default function Devices() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (supabaseError) throw supabaseError;
+      if (supabaseError) {
+        if (supabaseError.code === 'PGRST205') {
+          setError('Database Table Missing: The `devices` table was not found in your Supabase database. Please create it.');
+          setLoading(false);
+          return;
+        }
+        throw supabaseError;
+      }
       
       // Map Supabase snake_case to our camelCase interface if needed
       const mappedDevices = (data || []).map((d: any) => ({
@@ -79,7 +86,17 @@ export default function Devices() {
     } catch (err: any) {
       console.error('Error fetching devices:', err);
       if (err.message === 'Failed to fetch' || err.message.includes('Failed to fetch')) {
-        setError('Network error: Failed to connect to Supabase. Please check your internet connection and ensure your Supabase URL is correct (it must start with https://).');
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+        let errorMsg = 'Network error: Failed to connect to Supabase. ';
+        
+        if (supabaseUrl.startsWith('http://') && window.location.protocol === 'https:') {
+          errorMsg += 'Your app is running on HTTPS, but your Supabase URL uses HTTP. Browsers block this (Mixed Content). Please use an HTTPS Supabase URL.';
+        } else if (!supabaseUrl.startsWith('http')) {
+          errorMsg += 'Your Supabase URL is invalid. It must start with https://';
+        } else {
+          errorMsg += 'Please check your internet connection, ensure your Supabase URL is correct, and verify that your Supabase project is active and not paused. Note: Ad blockers or Brave Shields can sometimes block Supabase requests.';
+        }
+        setError(errorMsg);
       } else {
         setError(err.message || 'Failed to fetch devices');
       }
@@ -670,7 +687,7 @@ export default function Devices() {
                 <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Database Error</h3>
                 <div className="mt-2 text-sm text-red-700 dark:text-red-300">
                   <p>{error}</p>
-                  {error.includes('public.devices') && (
+                  {(error.includes('public.devices') || error.includes('Database Table Missing')) && (
                     <div className="mt-4">
                       <p className="font-semibold">To fix this, run this SQL in your Supabase SQL Editor:</p>
                       <pre className="mt-2 p-2 bg-zinc-900 text-zinc-100 rounded text-xs overflow-x-auto">

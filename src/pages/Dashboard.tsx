@@ -1,20 +1,47 @@
-import { Users, Monitor, Clock, AlertTriangle } from 'lucide-react';
-
-const stats = [
-  { name: 'Total Employees', value: '142', icon: Users, change: '+4.75%', changeType: 'positive' },
-  { name: 'Active Devices', value: '5', icon: Monitor, change: '0%', changeType: 'neutral' },
-  { name: 'Today Attendance', value: '128', icon: Clock, change: '-1.5%', changeType: 'negative' },
-  { name: 'Failed Logs', value: '3', icon: AlertTriangle, change: '+2', changeType: 'negative' },
-];
+import { useState, useEffect } from 'react';
+import { Users, Monitor, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import { attendanceService } from '../services/attendanceService';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState([
+    { name: 'Total Employees', value: '...', icon: Users, change: '0', changeType: 'neutral' },
+    { name: 'Active Devices', value: '...', icon: Monitor, change: '0', changeType: 'neutral' },
+    { name: 'Today Attendance', value: '...', icon: Clock, change: '0', changeType: 'neutral' },
+    { name: 'Failed Logs', value: '0', icon: AlertTriangle, change: '0', changeType: 'neutral' },
+  ]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const realStats = await attendanceService.getStats();
+        setStats([
+          { name: 'Total Employees', value: String(realStats.totalEmployees), icon: Users, change: 'Total', changeType: 'neutral' },
+          { name: 'Active Devices', value: String(realStats.activeDevices), icon: Monitor, change: 'Online', changeType: 'positive' },
+          { name: 'Today Attendance', value: String(realStats.todayAttendance), icon: Clock, change: 'Today', changeType: 'positive' },
+          { name: 'Failed Logs', value: String(realStats.failedLogs), icon: AlertTriangle, change: 'Alert', changeType: 'neutral' },
+        ]);
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Overview of your payroll and attendance system.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
+          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+            Overview of your payroll and attendance system.
+          </p>
+        </div>
+        {loading && <RefreshCw className="h-5 w-5 animate-spin text-zinc-400" />}
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -51,3 +78,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

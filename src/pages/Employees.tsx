@@ -52,7 +52,17 @@ export default function Employees() {
     } catch (err: any) {
       console.error('Error fetching employees:', err);
       if (err.message === 'Failed to fetch' || err.message.includes('Failed to fetch')) {
-        setError('Network error: Failed to connect to Supabase. Please check your internet connection and ensure your Supabase URL is correct (it must start with https://).');
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+        let errorMsg = 'Network error: Failed to connect to Supabase. ';
+        
+        if (supabaseUrl.startsWith('http://') && window.location.protocol === 'https:') {
+          errorMsg += 'Your app is running on HTTPS, but your Supabase URL uses HTTP. Browsers block this (Mixed Content). Please use an HTTPS Supabase URL.';
+        } else if (!supabaseUrl.startsWith('http')) {
+          errorMsg += 'Your Supabase URL is invalid. It must start with https://';
+        } else {
+          errorMsg += 'Please check your internet connection, ensure your Supabase URL is correct, and verify that your Supabase project is active and not paused. Note: Ad blockers or Brave Shields can sometimes block Supabase requests.';
+        }
+        setError(errorMsg);
       } else {
         toast.error('Failed to fetch employees');
       }
